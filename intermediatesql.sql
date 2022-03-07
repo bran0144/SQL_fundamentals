@@ -325,3 +325,73 @@ FROM country AS c
 LEFT JOIN matches AS m
 ON c.id = m.country_id
 GROUP BY country;
+
+-- Subqueries
+-- another select statement within your query
+-- Useful for intermediary transformations
+-- can be placed in any part of query (in select, from, where, group by)
+-- depends on what you want the final data to look like
+-- can return scalar quantities, a list, a table
+-- come use cases (comparing groups to summarized values, reshaping data, combine data that can't be joined)
+
+SELECT home_goal
+FROM match
+WHERE home_goal > (
+        SELECT AVG(home_goal)
+        FROM match);
+
+-- Simple subqueries are only processed once in the entire statement
+-- subqueries are processed first
+
+-- in the WHERE clause
+-- good for filtering
+SELECT date, hometeam_id, awayteam_id, home_goal, away_goal
+FROM match
+WHERE season = '2012/2013'
+        AND home_goal > (SELECT AVG(home_goal)
+                FROM match);
+
+-- can filter in with IN in the WHERE clause
+SELECT team_long_name, team_short_name AS abbr
+FROM team
+WHERE team_api_id IN (SELECT hometeam_id
+        FROM match
+        WHERE country_id = 15722);
+
+-- Exercises:
+-- Select the average of home + away goals, multiplied by 3
+SELECT 
+	3 * AVG(home_goal + away_goal)
+FROM matches_2013_2014;
+
+SELECT 
+	-- Select the date, home goals, and away goals scored
+    date,
+	home_goal,
+	away_goal
+FROM  matches_2013_2014
+-- Filter for matches where total goals exceeds 3x the average
+WHERE (home_goal + away_goal) > 
+       (SELECT 3 * AVG(home_goal + away_goal)
+        FROM matches_2013_2014); 
+
+SELECT 
+	-- Select the team long and short names
+	team_long_name,
+	team_short_name
+FROM team 
+-- Exclude all values from the subquery
+WHERE team_api_id NOT IN
+     (SELECT DISTINCT hometeam_ID  FROM match);
+
+SELECT
+	-- Select the team long and short names
+	team_long_name,
+	team_short_name
+FROM team
+-- Filter for teams with 8 or more home goals
+WHERE team_api_id IN
+	  (SELECT hometeam_id 
+       FROM match
+       WHERE home_goal >= 8);
+
