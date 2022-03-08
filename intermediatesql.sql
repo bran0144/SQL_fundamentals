@@ -345,6 +345,7 @@ WHERE home_goal > (
 
 -- in the WHERE clause
 -- good for filtering
+-- can only return a single column
 SELECT date, hometeam_id, awayteam_id, home_goal, away_goal
 FROM match
 WHERE season = '2012/2013'
@@ -394,4 +395,124 @@ WHERE team_api_id IN
 	  (SELECT hometeam_id 
        FROM match
        WHERE home_goal >= 8);
+
+-- FROM clause
+-- good for restructuring or transforming your data
+-- good for prefiltering or going from long to wide
+-- good for calculating aggregates of aggregates
+
+SELECT team, home_avg
+FROM (SELECT
+                t.team_long_name AS team,
+                AVG(m.home_goal) AS home_age
+        FROM match as m
+        LEFT JOIN team AS t
+        ON m.hometeam_id = t.team_api_id
+        WHERE season = '2011/2012'
+        GROUP BY team) AS subquery
+ORDER BY home_avg DESC
+LIMIT 3;
+
+-- You can create multiple subqueries in one FROM statement
+-- BUT, you need to alias them and join them to each other
+-- You can joing a subquery to an existing table
+-- BUT, you need to have a column in existing table that you can join to
+
+-- Exercises
+
+SELECT 
+	-- Select the country ID and match ID
+	country_id, 
+    id
+FROM match
+-- Filter for matches with 10 or more goals in total
+WHERE (home_goal + away_goal) >= 10;
+
+SELECT
+	-- Select country name and the count match IDs
+    c.name AS country_name,
+    COUNT(sub.id) AS matches
+FROM country AS c
+-- Inner join the subquery onto country
+-- Select the country id and match id columns
+INNER JOIN (SELECT country_id, id 
+           FROM match
+           -- Filter the subquery by matches with 10+ goals
+           WHERE (home_goal + away_goal) >= 10) AS sub
+ON c.id = sub.country_id
+GROUP BY country_name;
+
+SELECT
+	-- Select country, date, home, and away goals from the subquery
+    country,
+    date,
+    home_goal,
+    away_goal
+FROM 
+	-- Select country name, date, home_goal, away_goal, and total goals in the subquery
+	(SELECT c.name AS country, 
+     	    m.date, 
+     		m.home_goal, 
+     		m.away_goal,
+           (m.home_goal + m.away_goal) AS total_goals
+    FROM match AS m
+    LEFT JOIN country AS c
+    ON m.country_id = c.id) AS subq
+-- Filter by total goals scored in the main query
+WHERE total_goals >= 10;
+
+-- Subqueries In SELECT
+-- Useful for complex math calculations
+-- subquery needs to return a single value
+-- make sure you have filters in the right places (need where clause in both)
+
+SELECT 
+        season, 
+        COUNT(id) AS matches,
+        (SELECT COUNT(id) FROM match) as total_matches
+FROM match
+GROUP BY season;
+
+SELECT
+        date,
+        (home_goal + away_goal) AS goals,
+        (home_goal + away_goal) - 
+        (SELECT AVG(home_goal + away_goal)
+        FROM match
+        WHERE season = '2011/2012') AS diff
+FROM match
+WHERE season = '2011/2012';
+
+-- Exercises
+
+SELECT 
+	l.name AS league,
+    -- Select and round the league's total goals
+    ROUND(AVG(m.home_goal + m.away_goal), 2) AS avg_goals,
+    -- Select & round the average total goals for the season
+    (SELECT ROUND(AVG(home_goal + away_goal), 2) 
+     FROM match
+     WHERE season = '2013/2014') AS overall_avg
+FROM league AS l
+LEFT JOIN match AS m
+ON l.country_id = m.country_id
+-- Filter for the 2013/2014 season
+WHERE season = '2013/2014'
+GROUP BY l.name;
+
+SELECT
+	-- Select the league name and average goals scored
+	l.name AS league,
+	ROUND(AVG(m.home_goal + m.away_goal),2) AS avg_goals,
+    -- Subtract the overall average from the league average
+	ROUND(AVG(m.home_goal + m.away_goal) - 
+		(SELECT AVG(home_goal + away_goal)
+		 FROM match 
+         WHERE season = '2013/2014'),2) AS diff
+FROM league AS l
+LEFT JOIN match AS m
+ON l.country_id = m.country_id
+-- Only include 2013/2014 results
+WHERE m.season = '2013/2014'
+GROUP BY l.name;
 
