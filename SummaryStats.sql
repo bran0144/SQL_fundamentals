@@ -294,4 +294,129 @@ SELECT
 FROM Hosts
 ORDER BY Year ASC;
 
+-- Ranking
+ROW_NUMBER -- always assigns unique numbers, even if two row's values are the same
+RANK() -- assigns the same number to rwos with identical values, skipping over the next numbers
+DENSE_RANK() -- assigns the same number to rows, but does not skip over next numbers
 
+WITH Country_games AS (
+    SELECT Country, COUNT(DISTINCT Year) AS games
+    FROM Summer_Medals
+    WHERE 
+        Country IN ('GBR', 'DEN', 'FRA', 'ITA')
+    GROUP BY Country
+    ORDER BY Games DESC)
+SELECT Country, Games,
+    ROW_NUMBER() OVER (ORDER BY Games DESC) AS Row_N
+FROM Country_games
+ORDER BY Games DESC, Country ASC;
+
+WITH Country_games AS (
+    SELECT Country, COUNT(DISTINCT Year) AS games
+    FROM Summer_Medals
+    WHERE 
+        Country IN ('GBR', 'DEN', 'FRA', 'ITA')
+    GROUP BY Country
+    ORDER BY Games DESC)
+SELECT Country, Games,
+    ROW_NUMBER() OVER (ORDER BY Games DESC) AS Row_N,
+    RANK() OVER (ORDER BY Games DESC) AS Rank_N
+FROM Country_games
+ORDER BY Games DESC, Country ASC;
+
+WITH Country_games AS (
+    SELECT Country, COUNT(DISTINCT Year) AS games
+    FROM Summer_Medals
+    WHERE 
+        Country IN ('GBR', 'DEN', 'FRA', 'ITA')
+    GROUP BY Country
+    ORDER BY Games DESC)
+SELECT Country, Games,
+    ROW_NUMBER() OVER (ORDER BY Games DESC) AS Row_N,
+    RANK() OVER (ORDER BY Games DESC) AS Rank_N,
+    DENSE_RANK() OVER (ORDER BY Games DESC) AS Dense_Rank_N
+FROM Country_games
+ORDER BY Games DESC, Country ASC;
+
+-- Ranking without partitioning
+
+SELECT Country, Athlete, COUNT(*) AS Medals
+FROM Summer_Medals
+WHERE Country IN ('CHN', 'RUS')
+    AND Year = 2012
+GROUP BY Country, Athlete
+HAVING COUNT(*) > 1
+ORDER BY Country ASC, Medals DESC;
+
+-- Make sure to partition by country if you want athletes to be ranked by country, not ranked by total dataset
+WITH Country_medals AS (
+   SELECT Country, Athlete, COUNT(*) AS Medals
+        FROM Summer_Medals
+        WHERE Country IN ('CHN', 'RUS')
+            AND Year = 2012
+        GROUP BY Country, Athlete
+        HAVING COUNT(*) > 1
+        ORDER BY Country ASC, Medals DESC; 
+)
+SELECT
+    Country, Athlete, Medals,
+    DENSE_RANK() OVER (ORDER BY Medals DESC) AS Rank_N
+FROM Country_medals
+ORDER BY Country ASC, Medals DESC;
+
+-- Instead, you should do it like this:
+
+WITH Country_medals AS (
+   SELECT Country, Athlete, COUNT(*) AS Medals
+        FROM Summer_Medals
+        WHERE Country IN ('CHN', 'RUS')
+            AND Year = 2012
+        GROUP BY Country, Athlete
+        HAVING COUNT(*) > 1
+        ORDER BY Country ASC, Medals DESC; 
+)
+SELECT
+    Country, Athlete,
+    DENSE_RANK() OVER (
+        PARTITION BY Country
+        ORDER BY Medals DESC) AS Rank_N
+FROM Country_medals
+ORDER BY Country ASC, Medals DESC;
+
+-- Exercises:
+
+WITH Athlete_Medals AS (
+  SELECT
+    Athlete,
+    COUNT(*) AS Medals
+  FROM Summer_Medals
+  GROUP BY Athlete)
+
+SELECT
+  Athlete,
+  Medals,
+  -- Rank athletes by the medals they've won
+  RANK() OVER (ORDER BY Medals DESC) AS Rank_N
+FROM Athlete_Medals
+ORDER BY Medals DESC;
+
+WITH Athlete_Medals AS (
+  SELECT
+    Country, Athlete, COUNT(*) AS Medals
+  FROM Summer_Medals
+  WHERE
+    Country IN ('JPN', 'KOR')
+    AND Year >= 2000
+  GROUP BY Country, Athlete
+  HAVING COUNT(*) > 1)
+
+SELECT
+  Country,
+  -- Rank athletes in each country by the medals they've won
+  Athlete,
+  DENSE_RANK() OVER (PARTITION BY Country
+                ORDER BY Medals DESC) AS Rank_N
+FROM Athlete_Medals
+ORDER BY Country ASC, RANK_N ASC;
+
+-- Paging
