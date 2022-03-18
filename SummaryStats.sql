@@ -420,3 +420,93 @@ FROM Athlete_Medals
 ORDER BY Country ASC, RANK_N ASC;
 
 -- Paging
+-- Splits data into approximately equal chunks
+-- Helpful with API's
+-- Separating data into quartiles or thirds can help judge performance
+NTILE(n) -- splits the data into n approximately euqal pages
+
+WITH Disciplines AS (
+    SELECT DISTINCT Discipline
+    FROM Summer_Medals
+)
+SELECT Discipline, NTILE(15) OVER () AS Page 
+FROM Disciplines
+ORDER BY Page ASC;
+
+-- Splitting into thirds
+WITH Country_medals AS (
+    SELECT Country, COUNT(*) AS Medals
+    FROM Summer_Medals
+    GROUP_BY Country
+),
+SELECT Country, Medals,
+    NTILE(3) OVER (ORDER BY Medals DESC) AS Third 
+FROM Country_Medals;
+
+-- Thirds Averages
+WITH Country_medals AS (
+    SELECT Country, COUNT(*) AS Medals
+    FROM Summer_Medals
+    GROUP_BY Country),
+
+    Thirds AS (
+        SELECT Country, Medals,
+            NTILE(3) OVER (ORDER BY Medals DESC) AS Third 
+        FROM Country_Medals)
+
+SELECT Third, ROUND(AVG(Medals), 2) AS Avg_Medals
+FROM Thirds
+GROUP BY Third
+ORDER BY Third ASC;
+
+-- Exercises:
+
+WITH Events AS (
+  SELECT DISTINCT Event
+  FROM Summer_Medals)
+  
+SELECT
+  --- Split up the distinct events into 111 unique groups
+  Event,
+  NTILE(111) OVER (ORDER BY Event ASC) AS Page
+FROM Events
+ORDER BY Event ASC;
+
+
+WITH Athlete_Medals AS (
+  SELECT Athlete, COUNT(*) AS Medals
+  FROM Summer_Medals
+  GROUP BY Athlete
+  HAVING COUNT(*) > 1)
+  
+SELECT
+  Athlete,
+  Medals,
+  -- Split athletes into thirds by their earned medals
+  NTILE(3) OVER (ORDER BY Medals DESC) AS Third
+FROM Athlete_Medals
+ORDER BY Medals DESC, Athlete ASC;
+
+
+WITH Athlete_Medals AS (
+  SELECT Athlete, COUNT(*) AS Medals
+  FROM Summer_Medals
+  GROUP BY Athlete
+  HAVING COUNT(*) > 1),
+  
+  Thirds AS (
+  SELECT
+    Athlete,
+    Medals,
+    NTILE(3) OVER (ORDER BY Medals DESC) AS Third
+  FROM Athlete_Medals)
+  
+SELECT
+  -- Get the average medals earned in each third
+  Third,
+  AVG(Medals) AS Avg_Medals
+FROM Thirds
+GROUP BY Third
+ORDER BY Third ASC;
+
+-- Aggregate window functions
