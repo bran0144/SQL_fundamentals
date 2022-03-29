@@ -272,4 +272,141 @@ WHERE
   r.rental_date BETWEEN CAST('2005-05-01' AS DATE) 
   AND CAST('2005-05-01' AS DATE) + INTERVAL '90 day';
 
+-- Reformatting string and char data
+-- String concatenation
+SELECT
+    first_name,
+    last_name,
+    first_name || ' ' || last_name AS full_name
+FROM customer;
+
+-- OR you can use the CONCAT function
+SELECT
+    CONCAT(first_name, ' ', last_name) AS full_name
+FROM customer;
+-- Can concatenate non-string data too (with eiterh || or CONCAT)
+SELECT
+    customer_id || ': ' || first_name || ' ' || last_name AS full_name
+FROM customer;
+
+-- reformatting for upper or lower case, UPPER, LOWER, INITCAP
+SELECT
+    UPPER(email)
+FROM customer;
+
+SELECT
+    LOWER(title)
+FROM film;
+
+SELECT
+    INITCAP(title)
+FROM film;
+
+-- replacing char in a string
+SELECT
+    REPLACE(description, 'A Astounding',
+        'An Astounding') as description
+FROM film;
+-- Using reverse
+SELECT  
+    title,
+    REVERSE(title)
+FROM film AS f;
+
+-- Exercises:
+
+-- Concatenate the first_name and last_name and email 
+SELECT first_name || ' ' || last_name || ' <' || email || '>' AS full_email 
+FROM customer;
+
+-- Concatenate the first_name and last_name and email
+SELECT CONCAT(first_name, ' ', last_name,  ' <', email, '>') AS full_email 
+FROM customer;
+
+SELECT 
+  -- Concatenate the category name to coverted to uppercase
+  -- to the film title converted to title case
+  UPPER(c.name)  || ': ' || INITCAP(f.title) AS film_category, 
+  -- Convert the description column to lowercase
+  LOWER(description) AS description
+FROM 
+  film AS f 
+  INNER JOIN film_category AS fc 
+  	ON f.film_id = fc.film_id 
+  INNER JOIN category AS c 
+  	ON fc.category_id = c.category_id;
+
+SELECT 
+  -- Replace whitespace in the film title with an underscore
+  REPLACE(title, ' ', '_') AS title
+FROM film; 
+
+-- Parsing string and char data
+-- CHAR_LENGTH() - returns the length of a string (int)
+SELECT
+    title,
+    CHAR_LENGTH(title)
+FROM film;
+-- LENGTH() - works the same as CHAR_LENGTH()
+-- POSITION - returns the position (as an int) of char
+SELECT
+    email,
+    POSITION('@' IN email)
+FROM customer;
+-- STRPOS - similar to POSITION, but different syntax
+SELECT
+    email,
+    STRPOS(email, '@')
+FROM customer;
+-- Parsing
+-- LEFT - returns first n char from string
+SELECT
+    LEFT(description, 50)
+FROM film;
+-- similar to LEFT, just goes the other way
+SELECT
+    RIGHT(description, 50)
+FROM film;
+-- SUBSTRING(source_string/col, StartPOS(int), EndPOS(int))
+SELECT
+    SUBSTRING(description, 10, 50)
+FROM film AS f;
+-- Can be used together, say to get the left side of an email
+SELECT
+    SUBSTRING(email FROM 0 FOR POSITION('@' IN email))
+FROM
+    customer;
+-- to get the right characters from an email
+SELECT
+    SUBSTRING(email FROM POSITION('@' IN email) +1 FOR CHAR_LENGTH(email))
+FROM
+    customer;
+
+-- Exercises:
+SELECT 
+  -- Select the title and description columns
+  title,
+  description,
+  -- Determine the length of the description column
+  CHAR_LENGTH(description) AS desc_len
+FROM film;
+
+SELECT 
+  -- Select the first 50 characters of description
+  LEFT(description, 50) AS short_desc
+FROM 
+  film AS f; 
+
+SELECT 
+  -- Select only the street name from the address table
+  SUBSTRING(address FROM POSITION(' ' IN address)+1 FOR CHAR_LENGTH(address))
+FROM 
+  address;
+
+SELECT
+  -- Extract the characters to the left of the '@'
+  LEFT(email, POSITION('@' IN email)-1) AS username,
+  -- Extract the characters to the right of the '@'
+  SUBSTRING(email FROM POSITION('@' IN email) +1 FOR CHAR_LENGTH(email)) AS domain
+FROM customer;
 
