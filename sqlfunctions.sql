@@ -410,3 +410,44 @@ SELECT
   SUBSTRING(email FROM POSITION('@' IN email) +1 FOR CHAR_LENGTH(email)) AS domain
 FROM customer;
 
+-- Removing whitespace
+-- TRIM([leading | trailing| both] [characters] from string)
+-- default is both
+-- default char is blank space
+SELECT TRIM ('    padded    ');
+-- LTRIM, RTRIM only remove one side
+-- padding string to add length
+SELECT LPAD('padded', 10, '#');
+-- 10 is the full string length, not the number of chars added
+-- if string length desired is less than the string given, string will be truncated
+
+-- Exercises:
+-- Concatenate the padded first_name and last_name 
+SELECT 
+	RPAD(first_name, LENGTH(first_name)+1) || last_name AS full_name
+FROM customer;
+
+-- Concatenate the first_name and last_name 
+SELECT 
+	first_name || LPAD(last_name, LENGTH(last_name)+1) AS full_name
+FROM customer; 
+
+-- Concatenate the first_name and last_name 
+SELECT 
+	RPAD((first_name), LENGTH(first_name)+1) 
+    || RPAD(last_name, LENGTH(last_name)+2, ' <') 
+    || RPAD(email, LENGTH(email)+1, '>') AS full_email
+FROM customer; 
+
+-- Concatenate the uppercase category name and film title
+SELECT 
+  CONCAT(UPPER(c.name), ': ', f.title) AS film_category, 
+  -- Truncate the description remove trailing whitespace
+  TRIM(LEFT(description, 50)) AS film_desc
+FROM 
+  film AS f 
+  INNER JOIN film_category AS fc 
+  	ON f.film_id = fc.film_id 
+  INNER JOIN category AS c 
+  	ON fc.category_id = c.category_id;
+
