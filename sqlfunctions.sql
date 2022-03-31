@@ -451,3 +451,164 @@ FROM
   INNER JOIN category AS c 
   	ON fc.category_id = c.category_id;
 
+SELECT 
+  UPPER(c.name) || ': ' || f.title AS film_category, 
+-- Truncate the description without cutting off a word
+  LEFT(description, 50 - 
+-- Subtract the position of the first whitespace character
+  POSiTION(
+  ' ' IN REVERSE(LEFT(description, 50))
+  )
+) 
+FROM 
+  film AS f 
+INNER JOIN film_category AS fc 
+  ON f.film_id = fc.film_id 
+INNER JOIN category AS c 
+  ON fc.category_id = c.category_id;
+
+-- Full text search
+-- LIKE _ wildcard- used to match exactly one character
+-- % wildcard - used to match zero or more characters
+-- to get movies starting with ELF
+SELECT title
+FROM film
+WHERE title LIKE 'ELF%';
+
+-- if you used '%ELF' - you get those that end in ELF
+
+SELECT title
+FROM film
+WHERE title LIKE '%elf%'; --produces no results? (it's case senstive)
+
+SELECT title
+FROM film
+WHERE to_tsvector(title) @@ to_tsquery('elf'); 
+-- this isn't case senstive and returns all string with elf in it
+-- @@ match operator
+-- allows you to do natural language queries of full text data
+-- stemming, fuzzy string matching (to handle spelling mistakes, ranking)
+-- ts vector - converts to a different data type
+-- organizes them into lexemes
+
+-- Exercises:
+-- Select all columns
+SELECT *
+FROM film
+-- Select only records that begin with the word 'GOLD'
+WHERE title LIKE 'GOLD%';
+
+SELECT *
+FROM film
+-- Select only records that end with the word 'GOLD'
+WHERE title LIKE '%GOLD';
+
+SELECT *
+FROM film
+-- Select only records that contain the word 'GOLD'
+WHERE title LIKE '%GOLD%';
+
+-- Select the film description as a tsvector
+SELECT to_tsvector(description)
+FROM film;
+
+-- Select the title and description
+SELECT title, description
+FROM film
+-- Convert the title to a tsvector and match it against the tsquery 
+WHERE to_tsvector(title) @@ to_tsquery('elf');
+
+-- User defined data types
+-- CREATE TYPE command
+-- ENUM - custom list of values
+
+CREATE TYPE dayofweek AS ENUM (
+'MON', 'TUES', 'WED', 'THU', 'FRI');
+
+-- to find types
+SELECT typname, typcategory
+FROM pg_type
+WHERE typname = 'dayofweek';
+
+SELECT column_name, data_type, udt_name
+FROM INFORMATION_SCHEMA.columns
+WHERE table_name = 'film';
+
+-- User defined functions
+CREATE FUNCTION squared(i integer) RETURNS integer AS $$
+  BEGIN 
+    RETURN i * i;
+  END;
+$$ language plpgsql;
+
+-- get_customer_balance function (customer_ID, effective_data)
+-- inventory_held_by_customer(inventory_id)
+-- inventory_in_stock(inventory_id)
+
+-- Exercises:
+
+-- Create an enumerated data type, compass_position
+CREATE TYPE compass_position AS ENUM (
+  -- Use the four cardinal directions
+  'North', 
+  'South',
+  'East', 
+  'West'
+  );
+-- Confirm the new data type is in the pg_type system table
+SELECT typname
+FROM pg_type
+WHERE typname='compass_position';
+
+-- Select the column name, data type and udt name columns
+SELECT column_name, data_type, udt_name
+FROM INFORMATION_SCHEMA.COLUMNS 
+-- Filter by the rating column in the film table
+WHERE table_name ='film' AND column_name ='rating';
+
+SELECT *
+FROM pg_type 
+WHERE typname='mpaa_rating'
+
+-- Select the film title and inventory ids
+SELECT 
+  f.title, 
+  i.inventory_id
+FROM film AS f 
+-- Join the film table to the inventory table
+INNER JOIN inventory AS i ON f.film_id=i.film_id 
+
+-- Select the film title, rental and inventory ids
+SELECT 
+  f.title, 
+  i.inventory_id,
+-- Determine whether the inventory is held by a customer
+  inventory_held_by_customer(i.inventory_id) AS held_by_cust 
+FROM film as f 
+-- Join the film table to the inventory table
+INNER JOIN inventory AS i ON f.film_id=i.film_id 
+
+-- Select the film title and inventory ids
+SELECT 
+  f.title, 
+  i.inventory_id,
+-- Determine whether the inventory is held by a customer
+  inventory_held_by_customer(i.inventory_id) as held_by_cust
+FROM film as f 
+INNER JOIN inventory AS i ON f.film_id=i.film_id 
+WHERE
+-- Only include results where the held_by_cust is not null
+  inventory_held_by_customer(i.inventory_id) IS NOT NULL
+
+-- Extensions
+
+-- Commonly used- PostGIS (location queries), PostPic (image processing),
+  -- fuzzystrmatch, pg_trgm (full text search)
+-- to find list of available extensions:
+SELECT name
+FROM pg_available_extensions;
+-- to view installed extensions
+
+SELECT extname
+FROM pg_extension;
+
